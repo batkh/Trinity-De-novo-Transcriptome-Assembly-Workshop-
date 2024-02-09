@@ -1,0 +1,43 @@
+#setting the environment :
+#First install anaconda in linux 
+#Second create a new environment called “trinity “ 
+#launch the Anaconda Prompt (command-line interface), run the following command:
+%conda create --name trinity
+#Third activate the new environment :
+%conda activate trinity
+#Then install the bioconda package in this environment 
+%conda install -c bioconda trinity
+#Now the environment is ready to use .
+ %wget http://sourceforge.net/projects/trinityrnaseq/files/misc/TrinityNatureProtocolTutorial.tgz/
+%tar -xvf TrinityNatureProtocolTutorial.tgz
+% cat 1M_READS_sample/*.left.fq > reads.ALL.left.fq
+% cat 1M_READS_sample/*.right.fq > reads.ALL.right.fq
+%Trinity --seqType fq --SS_lib_type RF  \ --left reads.ALL.left.fq --right reads.ALL.right.fq  --CPU 6 --max_memory 10G
+%head trinity_out_dir.Trinity.fasta
+%/home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/TrinityStats.pl trinity_out_dir.Trinity.fasta
+%gmap_build -d genome -D . -k 13 GENOME_data/genome.fa
+%gmap -n 0 -D . -d genome trinity_out_dir.Trinity.fasta -f samse > trinity_gmap.sam
+% samtools view -Sb trinity_gmap.sam > trinity_gmap.bam
+% samtools sort trinity_gmap.bam  -o sorted_trinity_gmap.bam
+% samtools index trinity_gmap.bam index_trinity_gmap.bam
+%hisat2-build  GENOME_data/genome.fa genome_index 
+%hisat2 -x genome_index -1 reads.ALL.left.fq -2 reads.ALL.right.fq -I 300 --minins 20 --maxins 1000 -S alignment.sam
+%/home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/align_and_estimate_abundance.pl --seqType fq --left 1M_READS_sample/Sp.ds.1M.left.fq --right 1M_READS_sample/Sp.ds.1M.right.fq --transcripts trinity_out_dir.Trinity.fasta --output_prefix Sp_ds --est_method RSEM --aln_method bowtie --prep_reference --output_dir Sp_ds.RSEM
+%/home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/align_and_estimate_abundance.pl --seqType fq --left 1M_READS_sample/Sp.hs.1M.left.fq --right 1M_READS_sample/Sp.hs.1M.right.fq --transcripts trinity_out_dir.Trinity.fasta --output_prefix Sp_hs --est_method RSEM --aln_method bowtie --prep_reference --output_dir Sp_hs.RSEM
+%/home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/align_and_estimate_abundance.pl --seqType fq --left 1M_READS_sample/Sp.plat.1M.left.fq --right 1M_READS_sample/Sp.plat.1M.right.fq --transcripts trinity_out_dir.Trinity.fasta --output_prefix Sp_plat --est_method RSEM --aln_method bowtie --prep_reference --output_dir Sp_plat.RSEM
+%~/TrinityNatureProtocolTutorial$ /home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/align_and_estimate_abundance.pl --seqType fq --left 1M_READS_sample/Sp.log.1M.left.fq --right 1M_READS_sample/Sp.log.1M.right.fq --transcripts trinity_out_dir.Trinity.fasta --output_prefix Sp_log --est_method RSEM --aln_method bowtie --prep_reference --output_dir Sp_log.RSEM
+%~/TrinityNatureProtocolTutorial$ /home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/util/abundance_estimates_to_matrix.pl --est_method RSEM \
+      --out_prefix Trinity_trans \
+      Sp_ds.RSEM/Sp_ds.isoforms.results \
+      Sp_hs.RSEM/Sp_hs.isoforms.results \
+      Sp_log.RSEM/Sp_log.isoforms.results \
+      Sp_plat.RSEM/Sp_plat.isoforms.results
+%/home/trinity/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix ~/TrinityNatureProtocolTutorial/Trinity_trans.counts.matrix --method edgeR --dispersion 0.1 --output edgeR
+
+% ls -ltr edgeR/
+
+~/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/Analysis/DifferentialExpression/analyze_diff_expr.pl --matrix ../Trinity_trans.TMM.EXPR.matrix -P 1e-3 -C 2
+% ~/anaconda3/pkgs/trinity-2.1.1-6/opt/trinity-2.1.1/Analysis/DifferentialExpression/define_clusters_by_cutting_tree.pl \
+       --Ptree 20 -R diffExpr.P1e-3_C2.matrix.RData
+
+% evince diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/my_cluster_plots.pdf
